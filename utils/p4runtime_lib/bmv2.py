@@ -14,6 +14,7 @@
 #
 from switch import SwitchConnection
 from p4.tmp import p4config_pb2
+from p4log import program_p4log
 
 
 def buildDeviceConfig(bmv2_json_file_path=None):
@@ -22,9 +23,12 @@ def buildDeviceConfig(bmv2_json_file_path=None):
     device_config.reassign = True
     with open(bmv2_json_file_path) as f:
         device_config.device_data = f.read()
+
+    print('[bmv2.py] - Device config %s\n', bmv2_json_file_path)
     return device_config
 
 
 class Bmv2SwitchConnection(SwitchConnection):
     def buildDeviceConfig(self, **kwargs):
+    	program_p4log(**kwargs)
         return buildDeviceConfig(**kwargs)

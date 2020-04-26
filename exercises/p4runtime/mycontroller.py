@@ -3,6 +3,7 @@ import argparse
 import grpc
 import os
 import sys
+import json
 from time import sleep
 
 # Import P4Runtime lib from parent utils dir
@@ -14,6 +15,7 @@ import p4runtime_lib.bmv2
 from p4runtime_lib.error_utils import printGrpcError
 from p4runtime_lib.switch import ShutdownAllSwitchConnections
 import p4runtime_lib.helper
+from p4runtime_lib.p4log import program_p4log
 
 SWITCH_TO_HOST_PORT = 1
 SWITCH_TO_SWITCH_PORT = 2
@@ -69,7 +71,17 @@ def writeTunnelRules(p4info_helper, ingress_sw, egress_sw, tunnel_id,
 
     # TODO build the transit rule
     # TODO install the transit rule on the ingress switch
-    print "TODO Install transit tunnel rule"
+    table_entry = p4info_helper.buildTableEntry(
+        table_name="MyIngress.myTunnel_exact",
+        match_fields={
+            "hdr.myTunnel.dst_id": tunnel_id
+        },
+        action_name="MyIngress.myTunnel_forward",
+        action_params={
+            "port": SWITCH_TO_SWITCH_PORT
+        })
+    ingress_sw.WriteTableEntry(table_entry)
+    print "Installed transit tunnel rule on %s" % ingress_sw.name
 
     # 3) Tunnel Egress Rule
     # For our simple topology, the host will always be located on the
@@ -126,9 +138,13 @@ def printCounter(p4info_helper, sw, counter_name, index):
                 counter.data.packet_count, counter.data.byte_count
             )
 
+
 def main(p4info_file_path, bmv2_file_path):
     # Instantiate a P4Runtime helper from the p4info file
     p4info_helper = p4runtime_lib.helper.P4InfoHelper(p4info_file_path)
+
+    # Initialize p4log log schemas from header type
+    program_p4log(bmv2_file_path)
 
     try:
         # Create a switch connection object for s1 and s2;
